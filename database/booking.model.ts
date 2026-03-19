@@ -37,7 +37,7 @@ const BookingSchema = new Schema<IBooking>(
 );
 
 // Validate that the referenced event exists before saving a booking.
-BookingSchema.pre("save", async function (next) {
+BookingSchema.pre("save", async function () {
   const booking = this as IBooking;
 
   if (booking.isModified("eventId") || booking.isNew) {
@@ -49,18 +49,16 @@ BookingSchema.pre("save", async function (next) {
           `Event with ID ${booking.eventId} does not exist`,
         );
         error.name = "ValidationError";
-        return next(error);
+        throw error;
       }
     } catch {
       const validationError = new Error(
         "Invalid event ID format or database error",
       );
       validationError.name = "ValidationError";
-      return next(validationError);
+      throw validationError;
     }
   }
-
-  next();
 });
 
 BookingSchema.index({ eventId: 1 });
