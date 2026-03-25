@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { Suspense } from "react";
 import BookEvent from "@/components/BookEvent";
 import { IEvent } from "@/database/event.model";
 import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
 import EventCard from "@/components/EventCard";
+import { cacheLife } from "next/cache";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -103,24 +105,41 @@ const EventTags = ({ tags }: { tags: string[] }) => (
   </div>
 );
 
-const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
+const EventDetailsFallback = () => (
+  <section id="event">
+    <div className="header">
+      <h1>Event Description</h1>
+      <p>Loading event details...</p>
+    </div>
+  </section>
+);
+
+const EventDetails = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
+
+  return <CachedEventDetails slug={slug} />;
+};
+
+const CachedEventDetails = async ({ slug }: { slug: string }) => {
+  "use cache";
+  cacheLife("hours");
   const request = await fetch(`${baseUrl}/api/events/${slug}`);
+  const { event } = await request.json();
   const {
-    event: {
-      description,
-      image,
-      overview,
-      date,
-      time,
-      location,
-      mode,
-      agenda,
-      audience,
-      tags,
-      organizer,
-    },
-  } = await request.json();
+    _id,
+    description,
+    image,
+    overview,
+    date,
+    time,
+    location,
+    mode,
+    agenda,
+    audience,
+    tags,
+    organizer,
+  } = event;
+  const eventId = String(_id);
   const agendaItems = normalizeAgenda(agenda);
   const tagItems = normalizeTags(tags);
 
@@ -203,7 +222,7 @@ const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
               <p className="text-sm">Be the first to book this event!</p>
             )}
 
-            <BookEvent />
+            <BookEvent eventId={eventId} slug={slug} />
           </div>
         </aside>
       </div>
@@ -219,5 +238,11 @@ const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
     </section>
   );
 };
+
+const EventDetailsPage = ({ params }: { params: Promise<{ slug: string }> }) => (
+  <Suspense fallback={<EventDetailsFallback />}>
+    <EventDetails params={params} />
+  </Suspense>
+);
 
 export default EventDetailsPage;
