@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-
 import Event, { type IEvent } from "@/database/event.model";
 import connectDB from "@/lib/mogodb";
 
