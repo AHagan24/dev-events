@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { Book } from "lucide-react";
 import BookEvent from "@/components/BookEvent";
+import { IEvent } from "@/database/event.model";
+import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import EventCard from "@/components/EventCard";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -47,6 +49,22 @@ function normalizeAgenda(agenda: unknown): string[] {
   }
 
   return [];
+}
+
+function normalizeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  if (tags.length === 1 && typeof tags[0] === "string") {
+    const firstItem = tags[0].trim();
+
+    if (firstItem.startsWith("[")) {
+      return parseSerializedAgenda(firstItem);
+    }
+  }
+
+  return tags.filter((item): item is string => typeof item === "string");
 }
 
 const EventDetailItem = ({
@@ -104,10 +122,13 @@ const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
     },
   } = await request.json();
   const agendaItems = normalizeAgenda(agenda);
+  const tagItems = normalizeTags(tags);
 
   if (!description) return notFound();
 
-  const bookings = 10
+  const bookings = 10;
+
+  const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
 
   return (
     <section id="event">
@@ -167,7 +188,7 @@ const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
             <p>{organizer}</p>
           </section>
 
-          <EventTags tags={JSON.parse(tags[0])} />
+          <EventTags tags={tagItems} />
         </div>
         {/* {Right Side - Booking Form} */}
         <aside className="booking">
@@ -175,15 +196,25 @@ const EventDetailsPage = async ({ params }: { params: { slug: string } }) => {
             <h2>Book Your Spot</h2>
             {bookings > 0 ? (
               <p className="text-sm">
-                Join {bookings} others who have booked this event. Don't miss out!
+                Join {bookings} others who have booked this event. Don't miss
+                out!
               </p>
             ) : (
               <p className="text-sm">Be the first to book this event!</p>
             )}
-            
+
             <BookEvent />
           </div>
         </aside>
+      </div>
+      <div className="flex w-full flex-col gap-4 pt-20">
+        <h2>Similar Events You Might Like</h2>
+        <div className="events">
+          {similarEvents.length > 0 &&
+            similarEvents.map((similarEvent: IEvent) => (
+              <EventCard key={similarEvent.title} {...similarEvent} />
+            ))}
+        </div>
       </div>
     </section>
   );
