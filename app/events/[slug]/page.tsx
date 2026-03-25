@@ -3,11 +3,12 @@ import Image from "next/image";
 import { Suspense } from "react";
 import BookEvent from "@/components/BookEvent";
 import { IEvent } from "@/database/event.model";
-import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import {
+  getEventBySlug,
+  getSimilarEventsBySlug,
+} from "@/lib/actions/event.actions";
 import EventCard from "@/components/EventCard";
 import { cacheLife } from "next/cache";
-
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
 function parseSerializedAgenda(value: string): string[] {
   try {
@@ -123,8 +124,10 @@ const EventDetails = async ({ params }: { params: Promise<{ slug: string }> }) =
 const CachedEventDetails = async ({ slug }: { slug: string }) => {
   "use cache";
   cacheLife("hours");
-  const request = await fetch(`${baseUrl}/api/events/${slug}`);
-  const { event } = await request.json();
+  const event = await getEventBySlug(slug);
+
+  if (!event) return notFound();
+
   const {
     _id,
     description,

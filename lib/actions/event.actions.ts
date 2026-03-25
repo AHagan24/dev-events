@@ -47,6 +47,26 @@ function normalizeTags(tags: unknown): string[] {
     .filter(Boolean);
 }
 
+export const getEvents = async () => {
+  try {
+    await connectDB();
+
+    return await Event.find().sort({ createdAt: -1 }).lean();
+  } catch (e) {
+    return [];
+  }
+};
+
+export const getEventBySlug = async (slug: string) => {
+  try {
+    await connectDB();
+
+    return await Event.findOne({ slug }).lean();
+  } catch (e) {
+    return null;
+  }
+};
+
 export const getSimilarEventsBySlug = async (slug: string) => {
   try {
     await connectDB();
